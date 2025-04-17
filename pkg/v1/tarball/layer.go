@@ -137,23 +137,30 @@ func WithMediaType(mt types.MediaType) LayerOption {
 func WithCompressedCaching(l *layer) {
 	var once sync.Once
 	var err error
+	logrus.Info("Start run WithCompressedCaching...")
 
 	buf := bytes.NewBuffer(nil)
 	og := l.compressedopener
 
 	l.compressedopener = func() (io.ReadCloser, error) {
+		logrus.Info("Start run compressedopener func in WithCompressedCaching...")
 		once.Do(func() {
+			logrus.Info("Start run once.Do func in WithCompressedCaching...")
 			var rc io.ReadCloser
 			rc, err = og()
 			if err == nil {
 				defer rc.Close()
 				_, err = io.Copy(buf, rc)
+				logrus.Info("Buf size after copy + " + fmt.Sprint(buf.Len()))
 			}
+
+			logrus.Info("After run once.Do func in WithCompressedCaching...")
 		})
 		if err != nil {
 			return nil, err
 		}
 
+		logrus.Info("After run WithCompressedCaching...")
 		return io.NopCloser(bytes.NewBuffer(buf.Bytes())), nil
 	}
 }
@@ -235,6 +242,8 @@ func LayerFromOpener(opener Opener, opts ...LayerOption) (v1.Layer, error) {
 		return nil, err
 	}
 
+	logrus.Info("Compression type: " + comp + " in LayerFromOpener()")
+
 	layer := &layer{
 		compression:      compression.GZip,
 		compressionLevel: gzip.BestSpeed,
@@ -251,6 +260,7 @@ func LayerFromOpener(opener Opener, opts ...LayerOption) (v1.Layer, error) {
 	case compression.GZip:
 		layer.compressedopener = opener
 		layer.uncompressedopener = func() (io.ReadCloser, error) {
+			logrus.Info("Run layer.uncompressedopener in compression.GZip...")
 			urc, err := opener()
 			if err != nil {
 				return nil, err
@@ -260,6 +270,7 @@ func LayerFromOpener(opener Opener, opts ...LayerOption) (v1.Layer, error) {
 	case compression.ZStd:
 		layer.compressedopener = opener
 		layer.uncompressedopener = func() (io.ReadCloser, error) {
+			logrus.Info("Run layer.uncompressedopener in compression.ZStd...")
 			urc, err := opener()
 			if err != nil {
 				return nil, err
@@ -269,6 +280,7 @@ func LayerFromOpener(opener Opener, opts ...LayerOption) (v1.Layer, error) {
 	default:
 		layer.uncompressedopener = opener
 		layer.compressedopener = func() (io.ReadCloser, error) {
+			logrus.Info("Run layer.compressedopener in default...")
 			crc, err := opener()
 			if err != nil {
 				return nil, err
@@ -315,7 +327,7 @@ func LayerFromOpener(opener Opener, opts ...LayerOption) (v1.Layer, error) {
 			return nil, err
 		}
 	}
-	logrus.Info("After computeDigest...")
+	logrus.Info("After computeDiffID...")
 
 	return layer, nil
 }
