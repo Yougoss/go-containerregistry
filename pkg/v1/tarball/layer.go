@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"io"
 	"os"
 	"sync"
@@ -302,9 +303,11 @@ func LayerFromOpener(opener Opener, opts ...LayerOption) (v1.Layer, error) {
 		logs.Warn.Printf("Unexpected mediaType (%s) for selected compression in %s in LayerFromOpener().", layer.mediaType, layer.compression)
 	}
 
+	logrus.Info("Before computeDigest...")
 	if layer.digest, layer.size, err = computeDigest(layer.compressedopener); err != nil {
 		return nil, err
 	}
+	logrus.Info("Before computeDiffID...")
 
 	empty := v1.Hash{}
 	if layer.diffID == empty {
@@ -312,6 +315,7 @@ func LayerFromOpener(opener Opener, opts ...LayerOption) (v1.Layer, error) {
 			return nil, err
 		}
 	}
+	logrus.Info("After computeDigest...")
 
 	return layer, nil
 }
